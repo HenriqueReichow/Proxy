@@ -6,18 +6,26 @@ app = Flask(__name__) #instancia server
 @app.route('/<path:url>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
 def proxy(url):
     acao = []
-
+    
+    target = request.url
+    print(target)
     if blocked(url):
         acao.append('bloqueado')
-        return "<h1>Acesso Bloqueado</h1><p>Este site não é permitido.</p>", 403
+        register_log(url, ", ".join(acao)) 
+        return get_blocked_page(url), 403
     
+    if request.host != '127.0.0.1:5000' and request.host != 'localhost:5000':
+        # Caso cURL: Junta o host extraído com o caminho
+        target = f"http://{request.host}/{url}"
     else:
-        if url.startswith("http://"):
-            target = url
-        else:
+        # Caso Navegador: Usa a sua lógica original que estava certinha
+        if not url.startswith("http://") and not url.startswith("https://"):
             target = "http://" + url
+        else:
+            target = url
 
     method, headers, body = separate(request)
+    print(f"DEBUG: Método: {method}, Target: {target}")
 
     resp = send_req(method,target,headers,body)
     conteudo = process_resp(resp) 
@@ -25,7 +33,7 @@ def proxy(url):
     if conteudo != resp.text:
         acao.append('filtrado')
     else:
-        acao.append('sem filtro')
+        acao.append('permitido')
 
     acao_str = ", ".join(acao)
     register_log(url, acao_str)
@@ -52,7 +60,7 @@ def separate(req):
     method = req.method
     headers = {}
     for k,v in req.headers:
-        if k.lower() != 'host':
+        if k.lower() != 'host' and k.lower() != 'content-length':
             headers[k] = v
     body = req.get_data()
     return method, headers, body
@@ -76,6 +84,11 @@ def blocked(url):
             if dom in site:
                 return True
         return False
+
+def get_blocked_page(url):
+    with open('static/blocked.html', 'r') as f:
+        html = f.read()
+    return html.replace("{{url}}", url)
 
 if __name__ == '__main__':
     app.run(port = 5000)

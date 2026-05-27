@@ -1,0 +1,9 @@
+--comando para testar o post
+curl -v -x http://127.0.0.1:5000 -X POST -d "usuario=luis&teste=1" http://httpbin.org/post
+
+curl -v -x http://127.0.0.1:5000 -X PUT -d "atualizar=sim" http://httpbin.org/put
+
+curl -v -x http://127.0.0.1:5000 -X DELETE http://httpbin.org/delete
+
+curl -v -x http://127.0.0.1:5000 -X PATCH -d "campo=modificado" http://httpbin.org/patch
+
