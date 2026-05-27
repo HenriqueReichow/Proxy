@@ -1,0 +1,14 @@
+2026-05-27 14:30:31 | URL: localhost:8000/teste.html | Ação: filtrado
+2026-05-27 14:30:33 | URL: localhost:8000/teste.html | Ação: filtrado
+2026-05-27 14:30:34 | URL: localhost:8000/teste.html | Ação: filtrado
+2026-05-27 14:30:34 | URL: localhost:8000/teste.html | Ação: filtrado
+2026-05-27 14:38:12 | URL: http://www.exemplo.com | Ação: sem filtro
+2026-05-27 14:38:14 | URL: http://www.exemplo.com | Ação: sem filtro
+2026-05-27 14:38:15 | URL: http://www.exemplo.com | Ação: sem filtro
+2026-05-27 14:38:47 | URL: localhost:8000/teste.html | Ação: filtrado
+2026-05-27 14:39:12 | URL: http://www.exemplo.com | Ação: sem filtro
+2026-05-27 15:15:45 | URL: http://www.exemplo.com | Ação: sem filtro
+2026-05-27 15:15:47 | URL: localhost:8000/teste.html | Ação: filtrado
+2026-05-27 15:34:35 | URL: http://www.exemplo.com | Ação: ['sem filtro']
+2026-05-27 15:34:37 | URL: http://www.exemplo.com | Ação: ['sem filtro']
+2026-05-27 15:34:39 | URL: localhost:8000/teste.html | Ação: ['filtrado']
