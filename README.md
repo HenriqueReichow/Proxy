@@ -1,7 +1,7 @@
 # 🔀 Proxy HTTP com Flask
 
 Um proxy HTTP leve desenvolvido em Python com Flask, capaz de interceptar, filtrar e registrar requisições web. Suporta substituição de palavras em páginas HTML, bloqueio de sites e log de acessos.
-git commit -m "primeiro commit"
+
 
 ---
 
