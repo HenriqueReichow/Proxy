@@ -4,6 +4,33 @@ Um proxy HTTP leve desenvolvido em Python com Flask, capaz de interceptar, filtr
 
 
 ---
+## 🧠 Justificativa da Escolha da Tecnologia
+
+A dupla escolheu utilizar o framework Python Flask para o desenvolvimento do proxy HTTP devido à sua simplicidade, leveza e flexibilidade. Como o objetivo principal do projeto era implementar um proxy funcional capaz de interceptar, filtrar e registrar requisições HTTP, o Flask permitiu construir rapidamente uma aplicação web modular sem a complexidade de frameworks maiores.
+
+Além disso, o Flask possui integração simples com bibliotecas como `requests`, facilitando o encaminhamento de requisições HTTP e o tratamento das respostas recebidas. A estrutura minimalista também ajudou no entendimento do fluxo interno do proxy, permitindo maior controle sobre o comportamento das requisições e respostas.
+
+---
+
+## ✅ Vantagens percebidas
+
+- **Simplicidade de implementação** — poucas configurações iniciais e curva de aprendizado reduzida
+- **Leveza** — ideal para aplicações pequenas e experimentais como um proxy HTTP acadêmico
+- **Integração com Python** — facilidade para manipular strings, arquivos JSON e logs
+- **Flexibilidade** — permitiu implementar filtros de palavras, blacklist e logs sem depender de plugins externos
+- **Grande comunidade** — ampla documentação e suporte online
+
+---
+
+## ⚠️ Dificuldades encontradas
+
+- **Limitações nativas para proxy** — o Flask não foi criado especificamente para atuar como proxy HTTP, exigindo implementação manual de alguns comportamentos
+- **Tratamento de HTTPS** — o suporte transparente a HTTPS é mais complexo e não foi implementado no projeto
+- **Gerenciamento de headers e redirecionamentos** — algumas respostas HTTP exigiram tratamento específico para evitar erros ou incompatibilidades
+- **Escalabilidade limitada** — comparado a soluções mais robustas como Node.js com middleware especializado ou proxies dedicados (`Squid`, `Nginx`), o Flask possui menor desempenho para grande volume de requisições
+
+---
+
 
 ## 📋 Funcionalidades
 
