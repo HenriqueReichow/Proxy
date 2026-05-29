@@ -1,40 +1,54 @@
-from flask import Flask, request 
+from flask import Flask, request , Response
 import requests, json, re, datetime
-
+from urllib.parse import urljoin, urlparse
 app = Flask(__name__) #instancia server
 
 @app.route('/<path:url>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
 def proxy(url):
     
     target = request.url
-    print(target)
     if blocked(url):
         register_log(url, "bloqueado") 
         return get_blocked_page(url), 403
     
-    if request.host != '127.0.0.1:5000' and request.host != 'localhost:5000':
-        # Caso cURL: Junta o host extraído com o caminho
-        target = f"http://{request.host}/{url}"
-    else:
-        # Caso Navegador: Usa a sua lógica original que estava certinha
-        if not url.startswith("http://") and not url.startswith("https://"):
-            target = "http://" + url
+    # Monta a URL lidando com caminhos relativos (imagens, css, js)
+    if not url.startswith("http://") and not url.startswith("https://"):
+        referer = request.headers.get("Referer")
+        
+        if referer:
+            # Pega o referer (ex: http://localhost:5000/httpforever.com) e extrai o site alvo
+            ref_path = urlparse(referer).path.lstrip('/')
+            
+            if not ref_path.startswith("http://") and not ref_path.startswith("https://"):
+                base_url = "http://" + ref_path
+            else:
+                base_url = ref_path
+                
+            # Junta o domínio original com o arquivo que o navegador pediu
+            target = urljoin(base_url, url)
         else:
-            target = url
+            target = "http://" + url
+    else:
+        target = url
 
     method, headers, body = separate(request)
     print(f"DEBUG: Método: {method}, Target: {target}")
 
     resp = send_req(method,target,headers,body)
-    print(f"DEBUG CABEÇALHO: {resp.headers.get('Content-Type')}")
-    conteudo = process_resp(resp) 
 
-    if conteudo != resp.text:
-        register_log(url, "filtrado")
-    else:
-        register_log(url, "permitido")
+    conteudo, acao = process_resp(resp)
+    register_log(url, acao)
     
-    return conteudo, resp.status_code, resp.headers.items()
+    
+    headers_limpos = []
+    for nome, valor in resp.headers.items():
+        if nome.lower() not in ('content-encoding', 'content-length', 'transfer-encoding', 'connection'):
+            # Força UTF-8 no content-type HTML
+            if nome.lower() == 'content-type' and 'text/html' in valor.lower():
+                valor = 'text/html; charset=utf-8'
+            headers_limpos.append((nome, valor))
+
+    return Response(conteudo, resp.status_code, headers_limpos)
 
 def register_log(url, acao):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -66,9 +80,34 @@ def send_req(method, url, headers, body):
     return requests.request(method=method, url=url, headers=headers, data=body, allow_redirects=False)
 
 def process_resp(resp):
-    if 'text/html' in resp.headers.get('Content-Type', ''):
-        return filter_word(resp.text)
-    return resp.text
+    content_type = resp.headers.get('Content-Type', '').lower()
+    
+    if 'text/html' in content_type:
+        if resp.encoding is None or resp.encoding.lower() == 'iso-8859-1':
+            resp.encoding = resp.apparent_encoding
+        
+        original = resp.text
+        filtrado = filter_word(original)
+        
+        # compara as strings ANTES de virar bytes
+        if filtrado != original:
+            acao = "filtrado"
+        else:
+            acao = "permitido"
+        
+        return filtrado.encode('utf-8'), acao  # retorna os dois juntos
+    
+    if 'text/css' in content_type:
+        base = resp.url.split('/')[2]
+        def reescrever_url(match):
+            caminho = match.group(1)
+            if caminho.startswith('http'):
+                return f"url('{caminho}')"
+            return f"url('http://localhost:5000/{base}{caminho}')"
+        css = re.sub(r"url\(['\"]?(/[^)'\"]+)['\"]?\)", reescrever_url, resp.text)
+        return css.encode('utf-8'), "permitido"
+    
+    return resp.content, "permitido"
 
 def blocked(url):
     url_limpa = url.replace("http://", "").replace("https://", "")
