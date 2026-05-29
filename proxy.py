@@ -5,13 +5,11 @@ app = Flask(__name__) #instancia server
 
 @app.route('/<path:url>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
 def proxy(url):
-    acao = []
     
     target = request.url
     print(target)
     if blocked(url):
-        acao.append('bloqueado')
-        register_log(url, ", ".join(acao)) 
+        register_log(url, "bloqueado") 
         return get_blocked_page(url), 403
     
     if request.host != '127.0.0.1:5000' and request.host != 'localhost:5000':
@@ -28,15 +26,14 @@ def proxy(url):
     print(f"DEBUG: Método: {method}, Target: {target}")
 
     resp = send_req(method,target,headers,body)
+    print(f"DEBUG CABEÇALHO: {resp.headers.get('Content-Type')}")
     conteudo = process_resp(resp) 
 
     if conteudo != resp.text:
-        acao.append('filtrado')
+        register_log(url, "filtrado")
     else:
-        acao.append('permitido')
-
-    acao_str = ", ".join(acao)
-    register_log(url, acao_str)
+        register_log(url, "permitido")
+    
     return conteudo, resp.status_code, resp.headers.items()
 
 def register_log(url, acao):
@@ -76,7 +73,7 @@ def process_resp(resp):
 def blocked(url):
     url_limpa = url.replace("http://", "").replace("https://", "")
     dom = url_limpa.split('/')[0]
-    print('dom ',dom )
+    # print('dom ',dom )
     with open('blocked.json', 'r') as bloq:
         dados = json.load(bloq)
         
