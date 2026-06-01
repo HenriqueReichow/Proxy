@@ -1,4 +1,4 @@
-from flask import Flask, request , Response
+from flask import Flask, request , Response, redirect
 import requests, json, re, datetime
 from urllib.parse import urljoin, urlparse
 
@@ -19,6 +19,10 @@ def proxy(url):
     elif url.startswith('https:/') and not url.startswith('https://'):
         url = url.replace('https:/', 'http://', 1)
 
+    partes = url.split('/')
+    if (url.startswith("http://") or url.startswith("https://")) and len(partes) == 3:
+        return redirect(f"/{url}/")
+    
     if request.query_string:
         url_com_query = f"{url}?{request.query_string.decode('utf-8')}"
     else:
@@ -87,7 +91,8 @@ def register_log(url, acao):
 
 def filter_word(html):
     for termo, substituto in WORDS_FILTER.items():
-        padrao = re.compile(re.escape(termo), re.IGNORECASE)
+        # O (?![^<]*>) garante que a palavra não será substituída se estiver dentro de uma tag HTML <...>
+        padrao = re.compile(rf"{re.escape(termo)}(?![^<]*>)", re.IGNORECASE)
         html = padrao.sub(substituto, html)
 
     return html
