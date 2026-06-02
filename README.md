@@ -1,14 +1,14 @@
 # 🔀 Proxy HTTP com Flask
 
-Um proxy HTTP leve desenvolvido em Python com Flask, capaz de interceptar, filtrar e registrar requisições web. Suporta substituição de palavras em páginas HTML, bloqueio de sites e log de acessos.
-
+Um proxy HTTP desenvolvido em Python com Flask, capaz de interceptar, filtrar e registrar requisições web. Suporta substituição de palavras em páginas HTML, bloqueio de sites e log de acessos.
 
 ---
+
 ## 🧠 Justificativa da Escolha da Tecnologia
 
-A dupla escolheu utilizar o framework Python Flask para o desenvolvimento do proxy HTTP devido à sua simplicidade, leveza e flexibilidade. Como o objetivo principal do projeto era implementar um proxy funcional capaz de interceptar, filtrar e registrar requisições HTTP, o Flask permitiu construir rapidamente uma aplicação web modular sem a complexidade de frameworks maiores.
+A dupla escolheu o framework Python Flask para o desenvolvimento do proxy HTTP devido à sua simplicidade, leveza e flexibilidade. O Flask permitiu construir uma aplicação modular sem a complexidade de frameworks maiores, e sua integração com a biblioteca `requests` facilitou o encaminhamento de requisições e o tratamento das respostas.
 
-Além disso, o Flask possui integração simples com bibliotecas como `requests`, facilitando o encaminhamento de requisições HTTP e o tratamento das respostas recebidas. A estrutura minimalista também ajudou no entendimento do fluxo interno do proxy, permitindo maior controle sobre o comportamento das requisições e respostas.
+A estrutura minimalista também ajudou no entendimento do fluxo interno do proxy, permitindo maior controle sobre o comportamento das requisições e respostas. Comparado a sockets TCP puros, o Flask elimina a necessidade de implementar manualmente o parsing do protocolo HTTP.
 
 ---
 
@@ -24,21 +24,21 @@ Além disso, o Flask possui integração simples com bibliotecas como `requests`
 
 ## ⚠️ Dificuldades encontradas
 
-- **Limitações nativas para proxy** — o Flask não foi criado especificamente para atuar como proxy HTTP, exigindo implementação manual de alguns comportamentos
-- **Tratamento de HTTPS** — o suporte transparente a HTTPS é mais complexo e não foi implementado no projeto
-- **Gerenciamento de headers e redirecionamentos** — algumas respostas HTTP exigiram tratamento específico para evitar erros ou incompatibilidades
-- **Escalabilidade limitada** — comparado a soluções mais robustas como Node.js com middleware especializado ou proxies dedicados (`Squid`, `Nginx`), o Flask possui menor desempenho para grande volume de requisições
+- **Limitações nativas para proxy** — o Flask não foi criado para atuar como proxy HTTP, exigindo implementação manual de vários comportamentos
+- **Tratamento de HTTPS** — o suporte transparente a HTTPS é complexo e não foi implementado
+- **Gerenciamento de headers** — cabeçalhos como `Content-Length`, `Content-Encoding` e `Accept-Encoding` exigiram tratamento específico para evitar erros
+- **Encoding de páginas** — sites que declaravam `ISO-8859-1` mas eram `UTF-8` causaram problemas de caracteres que exigiram detecção automática de encoding
+- **URLs relativas** — recursos como imagens e CSS com caminhos relativos precisaram de lógica extra para ser corretamente redirecionados pelo proxy
 
 ---
-
 
 ## 📋 Funcionalidades
 
 - **Proxy transparente** — redireciona requisições GET, POST, PUT, DELETE e PATCH
-- **Filtro de palavras** — substitui termos indesejados em páginas HTML automaticamente
-- **Bloqueio de sites** — impede acesso a domínios configurados numa lista negra
+- **Filtro de palavras** — substitui termos indesejados em páginas HTML automaticamente (case-insensitive, não afeta tags HTML)
+- **Bloqueio de sites** — impede acesso a domínios configurados na lista negra, retornando página personalizada
 - **Log de acessos** — registra todas as requisições com timestamp, URL e ação tomada
-- **Página de bloqueio customizada** — exibe uma página HTML ao tentar acessar sites bloqueados
+- **Reescrita de links** — reescreve `href`, `src` e `action` para que os links internos continuem passando pelo proxy
 
 ---
 
@@ -51,7 +51,9 @@ proxy/
 ├── blocked.json        # Lista de domínios bloqueados
 ├── log.txt             # Gerado automaticamente com os registros
 ├── static/
-│   └── blocked.html    # Página exibida ao bloquear um acesso
+│   ├── blocked.html    # Página exibida ao bloquear um acesso
+│   ├── painel.html     # Painel visual para disparar requisições de teste
+│   └── post.html       # Formulário HTML para teste de POST
 └── test.txt            # Comandos cURL para testes
 ```
 
@@ -81,34 +83,45 @@ python proxy.py
 
 O proxy estará disponível em `http://127.0.0.1:5000`.
 
-### 2. Configure seu cliente para usar o proxy
+### 2. Acesse sites pelo proxy
 
-**Via navegador:** acesse URLs no formato:
+**Via navegador:** acesse URLs diretamente no formato:
 ```
 http://localhost:5000/http://exemplo.com
 ```
 
-**Via cURL** (usando flag `-x` para proxy):
+**Via cURL:**
 ```bash
-curl -x http://127.0.0.1:5000 http://exemplo.com
+curl -v http://127.0.0.1:5000/http://exemplo.com
 ```
+
+> ⚠️ **Atenção:** não use a flag `-x` do cURL — ela ativa o modo proxy nativo, que envia a requisição em um formato diferente e não é suportado nesta implementação. Use sempre o formato com a URL no caminho, como mostrado acima.
 
 ---
 
 ## 🧪 Exemplos de Teste
 
 ```bash
-# POST
-curl -v -x http://127.0.0.1:5000 -X POST -d "usuario=luis&teste=1" http://httpbin.org/post
+# Acesso transparente (GET)
+curl -v http://127.0.0.1:5000/http://httpbin.org/get
+
+# POST com dados
+curl -v -X POST -d "usuario=luis&teste=1" http://127.0.0.1:5000/http://httpbin.org/post
 
 # PUT
-curl -v -x http://127.0.0.1:5000 -X PUT -d "atualizar=sim" http://httpbin.org/put
+curl -v -X PUT -d "atualizar=sim" http://127.0.0.1:5000/http://httpbin.org/put
 
 # DELETE
-curl -v -x http://127.0.0.1:5000 -X DELETE http://httpbin.org/delete
+curl -v -X DELETE http://127.0.0.1:5000/http://httpbin.org/delete
 
 # PATCH
-curl -v -x http://127.0.0.1:5000 -X PATCH -d "campo=modificado" http://httpbin.org/patch
+curl -v -X PATCH -d "campo=modificado" http://127.0.0.1:5000/http://httpbin.org/patch
+
+# Bloqueio de site
+curl -v http://127.0.0.1:5000/http://www.sitex.com
+
+# Filtro de palavras (página com conteúdo filtrado)
+curl -v http://127.0.0.1:5000/http://httpforever.com
 ```
 
 ---
@@ -117,7 +130,7 @@ curl -v -x http://127.0.0.1:5000 -X PATCH -d "campo=modificado" http://httpbin.o
 
 ### Filtro de Palavras — `words.json`
 
-Define pares `"palavra original": "substituto"`. A substituição é **case-insensitive** e ocorre em todo conteúdo HTML retornado.
+Define pares `"palavra original": "substituto"`. A substituição é **case-insensitive**, não afeta texto dentro de tags HTML e ocorre em todo conteúdo HTML retornado.
 
 ```json
 {
@@ -129,16 +142,19 @@ Define pares `"palavra original": "substituto"`. A substituição é **case-inse
 
 ### Sites Bloqueados — `blocked.json`
 
-Lista de domínios que terão acesso negado (retorna HTTP 403).
+Lista de domínios que terão acesso negado (retorna HTTP 403 com página personalizada).
 
 ```json
 {
     "bloqueados": [
-        "exemplo-bloqueado.com",
-        "outro-site.com"
+        "www.sitex.com",
+        "redes-sociais.net",
+        "joguinhos.io"
     ]
 }
 ```
+
+> Os arquivos `words.json` e `blocked.json` são carregados uma vez na inicialização do servidor. Para aplicar mudanças, reinicie o proxy.
 
 ---
 
@@ -147,12 +163,11 @@ Lista de domínios que terão acesso negado (retorna HTTP 403).
 O arquivo `log.txt` é gerado automaticamente e registra cada requisição no formato:
 
 ```
-2024-01-15 14:32:01 | URL: http://exemplo.com | Ação: permitido
-2024-01-15 14:32:45 | URL: http://site-ruim.com | Ação: bloqueado
-2024-01-15 14:33:10 | URL: http://exemplo.com/pagina | Ação: filtrado
+2026-05-28 18:43:57 | URL: httpforever.com | Ação: filtrado
+2026-05-28 18:28:33 | URL: joguinhos.io    | Ação: bloqueado
+2026-05-28 18:28:08 | URL: you.com         | Ação: permitido
 ```
 
-**Possíveis ações:**
 | Ação | Descrição |
 |------|-----------|
 | `permitido` | Requisição encaminhada sem alterações |
@@ -164,14 +179,20 @@ O arquivo `log.txt` é gerado automaticamente e registra cada requisição no fo
 ## ⚠️ Limitações
 
 - Não suporta HTTPS de forma transparente (apenas HTTP)
+- Recursos carregados via JavaScript dinâmico podem não passar pelo proxy
 - Não implementa cache de respostas
 - Não há autenticação no próprio proxy
-- Redirecionamentos (`301`/`302`) não são seguidos automaticamente
 
 ---
 
 ## 📌 Observações
 
 - O servidor roda na porta `5000` por padrão
-- O arquivo `blocked.json` deve existir antes de iniciar o servidor
+- Os arquivos `blocked.json` e `words.json` devem existir antes de iniciar o servidor
 - A pasta `static/` com o arquivo `blocked.html` é necessária para a página de bloqueio
+
+## 🤖 Uso de Inteligência Artificial
+
+A dupla utilizou IA como apoio durante o desenvolvimento,
+principalmente para esclarecimento de dúvidas e geração de documentação.
+Todo o código foi escrito e compreendido pela dupla. Detalhes completos no relatório técnico.
